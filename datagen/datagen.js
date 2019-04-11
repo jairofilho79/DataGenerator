@@ -2420,6 +2420,7 @@ class Column{
         this.ID = "COL_"+uniqueID();
         this.generator.parent = this;
         this.display = true; //Variável utilizada para filtrar a dimensão de dados.
+        this.highest = undefined;
     }
 }
 
@@ -2574,8 +2575,11 @@ class DataGen {
                 if(this.columns[j].display) {
                     if(this.save_as === "json" && !this.header){
                         data[i].push(this.columns[j].generator.generate());
+                        let len = data[i].length - 1;
+                        if(this.columns[j].highest < data[i][len]) {this.columns[j].highest = data[i][len]}
                     } else {
                         data[i][this.columns[j].name] = this.columns[j].generator.generate();
+                        if(this.columns[j].highest < data[i][this.columns[j].name]) {this.columns[j].highest = data[i][this.columns[j].name]}
                     }
                 }
             }

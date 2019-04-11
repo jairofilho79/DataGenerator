@@ -17,12 +17,13 @@ let lastCollumnSelected;
 let lastCollumnSelectedColor;
 
 let generatorEspecialPaste;
-let especialPasteState = 0; //0-Desativado, 1-Cola uma vez, 2-Cola até clicar de voltano botão, 3-Magic
+let especialPasteState = 0; //0-Desativado, 1-Cola uma vez, 2-Cola até clicar de voltar no botão, 3-Magic
 
 
 let ipc = require('electron').ipcRenderer;
 
 let vis = require("@labvis-ufpa/vistechlib");
+let selectColumnPreview = "Dimension 1"; //Inicialize according the first columns's name.
 
 let pc;
 
@@ -38,10 +39,7 @@ const platformASpath = process.platform === "darwin" || process.platform === "li
 ipc.on('call-datagen', function(event, data){// ipc.send('receive-datagen', activeGenerator[currentDataGen].getGenParams());
 });
 
-ipc.on('delete-dimension', function(){
-    deleteCollumn();
-})
-
+ipc.on('delete-dimension', function(){deleteCollumn();})
 
 function newModal(header="Are you Sure?",content="",buttons=[{'label' : 'Cancel', 'returning': 0},{'label': 'Ok', 'returning': 1}]) {
     let modal = '#windowModalPadrao';
@@ -93,9 +91,7 @@ function alertModal(message,time) {if(time === undefined) {time = 5000} const mo
 
 function confirmModal(message,buttons) {const modal = boxModal(`<p style="text-align: center; font-size: large; font-family: 'Adobe Garamond Pro'">${message}</p>`,buttons); modal.open(); return modal;}
 
-ipc.on('alert', function(event,message) {
-    alert(message);
-})
+ipc.on('alert', function(event,message) {alert(message);})
 
 ipc.on('verify-autosave', function(event, saved, unsaved) {
    let buttons = [];
@@ -1520,6 +1516,33 @@ function redrawPreview(){
     }
 }
 
+function angleFiltering() {
+    let angle = 90;
+    let threshold = Math.round(180/angle);
+    current_sample = datagen[currentDataGen].generateSample();
+    console.log(current_sample);
+    let keys = Object.keys(current_sample[0]);
+    if(keys.length>1) {
+        let groups = {};
+
+        for (let sample of current_sample) {
+            for (let dimension in keys) {
+                if(!isNaN(sample[keys[dimension]]) && isFinite(sample[keys[dimension]]) && !isNaN(sample[keys[dimension+1]]) && isFinite(sample[keys[dimension+1]])) {
+                    groups[(sample[keys[dimension] + 1] - sample[keys[dimension]])%threshold].push([sample[dimension],sample[dimension+1]]);
+                }
+            }
+        }
+    } else {return; }
+    preview(current_sample);
+    ipc.send('change-datasample', current_sample);
+}
+
+function normalizingNumbers(num,top) {
+
+}
+
+angleFiltering();
+
 /*putGeneratorOptions
 * Entradas: select - Lista que será mostrada na hora da seleção
 *           selected - Opção que já deverá aparecer selecionada
@@ -1885,8 +1908,6 @@ function optionsPreview() {
     }
     $combox.val(selectColumnPreview);
 }
-
-let selectColumnPreview = "Dimension 1"; //Inicialize according the first columns's name.
 
 $('#comboBoxPreview').change(() => {
     selectColumnPreview = $("#comboBoxPreview").val();
