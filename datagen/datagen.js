@@ -2420,7 +2420,8 @@ class Column{
         this.ID = "COL_"+uniqueID();
         this.generator.parent = this;
         this.display = true; //Variável utilizada para filtrar a dimensão de dados.
-        this.highest = undefined;
+        this.highest = 1;
+        this.lowerest = 0;
     }
 }
 
@@ -2429,7 +2430,7 @@ class DataGen {
     constructor () {
         this.name = "Model";
         this.n_lines = 100; // Quantidade de linhas na geração
-        this.n_sample_lines = 100;
+        this.n_sample_lines = 2000;
         this.save_as = "csv";
         this.header = true;
         this.header_type = true;
@@ -2576,10 +2577,12 @@ class DataGen {
                     if(this.save_as === "json" && !this.header){
                         data[i].push(this.columns[j].generator.generate());
                         let len = data[i].length - 1;
-                        if(this.columns[j].highest < data[i][len]) {this.columns[j].highest = data[i][len]}
+                        if(this.columns[j].highest  < data[i][len]) {this.columns[j].highest  = data[i][len]}
+                        if(this.columns[j].lowerest > data[i][len]) {this.columns[j].lowerest = data[i][len]}
                     } else {
                         data[i][this.columns[j].name] = this.columns[j].generator.generate();
-                        if(this.columns[j].highest < data[i][this.columns[j].name]) {this.columns[j].highest = data[i][this.columns[j].name]}
+                        if(this.columns[j].highest  < data[i][this.columns[j].name]) {this.columns[j].highest  = data[i][this.columns[j].name]}
+                        if(this.columns[j].lowerest > data[i][this.columns[j].name]) {this.columns[j].lowerest = data[i][this.columns[j].name]}
                     }
                 }
             }

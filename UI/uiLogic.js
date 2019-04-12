@@ -446,6 +446,9 @@ $("html").ready(function(){
     //The color lines became gray on resizing, so the reload solve the problem.
     $(window).on("resize", "", () => {
         showGenerators();
+        addGenerator();
+        addGenerator();
+        BlocksAF();
     });
 
     $("#hidePreview").on("click", "", function(e){
@@ -1516,32 +1519,80 @@ function redrawPreview(){
     }
 }
 
-function angleFiltering() {
-    let angle = 90;
-    let threshold = Math.round(180/angle);
-    current_sample = datagen[currentDataGen].generateSample();
-    console.log(current_sample);
-    let keys = Object.keys(current_sample[0]);
-    if(keys.length>1) {
-        let groups = {};
+//Apenas para separar a funcionalidade da aplicação
+function BlocksAF() {
+    let angle = 20;
+    let current_sample = datagen[currentDataGen].generateSample();
+    // let current_sample_normalized = BlocksNN(current_sample);
+    // console.log(current_sample_normalized); return;
+    // console.log(angleFiltering(angle,current_sample_normalized));
+    console.log(angleFiltering(angle,current_sample));
 
-        for (let sample of current_sample) {
-            for (let dimension in keys) {
-                if(!isNaN(sample[keys[dimension]]) && isFinite(sample[keys[dimension]]) && !isNaN(sample[keys[dimension+1]]) && isFinite(sample[keys[dimension+1]])) {
-                    groups[(sample[keys[dimension] + 1] - sample[keys[dimension]])%threshold].push([sample[dimension],sample[dimension+1]]);
+    preview(current_sample);
+}
+
+function isNumeric(n) {
+    return !isNaN(parseFloat(n)) && isFinite(n);
+}
+
+function angleFiltering(angle,sample) { //Separar os ângulos por dimensão
+    let angleM = Math.tan((angle)*Math.PI/180);
+    let numClusters = Math.ceil(90/((angle%90) === 0 ? 90 : (angle%90)));
+    console.log(angleM,numClusters);
+    // return;
+
+    // console.log(sample);
+    let keys = Object.keys(sample[0]);
+    let clusters = {};
+    if(keys.length>1) { //Do only if have more than one dimension.
+        for (let data of sample) {
+            for (let dimension = 0; dimension < keys.length-1; dimension++) {
+                if(isNumeric(data[keys[dimension]]) && isNumeric(data[keys[dimension+1]])) {
+                    let m = (data[keys[dimension + 1]] - data[keys[dimension]]);
+                    if(m === 0) {clusters['0'] = [data[keys[dimension]],data[keys[dimension + 1]]]; continue;}
+                    let angleAcc = -1;
+                    for(let counter = 0; counter < numClusters; counter++) {
+                        angleAcc = (angleAcc + angleM)/(1 - angleAcc * angleM);
+                        let ang = angleAcc > 1? '45' : String(Math.round(Math.atan(angleAcc)*180/Math.PI));
+                        if(m < angleAcc) {
+                            if(clusters[ang] == undefined) { clusters[ang] = {} }
+                            if(clusters[ang][keys[dimension]] == undefined) {
+                                clusters[ang][keys[dimension]] = [];
+                            }
+                            clusters[ang][keys[dimension]].push([data[keys[dimension]],data[keys[dimension + 1]]]);
+                            break;
+                        }
+                    }
                 }
             }
         }
-    } else {return; }
-    preview(current_sample);
-    ipc.send('change-datasample', current_sample);
+    } else {return false; }
+    return clusters;
 }
 
-function normalizingNumbers(num,top) {
-
+function normalizingNumbers(num,top) {//Função Genérica para normalizar o sample.
 }
 
-angleFiltering();
+function BlocksNN(sample) {
+    let keys = Object.keys(sample[0]);
+    let lowerst = [], highest = [], current_sample_normalized = [];
+    for(c of datagen[currentDataGen].columns) {console.log(c); lowerst.push(c.lowerest); highest.push(c.highest)}
+    console.log(keys,highest,lowerst);
+    return;
+    for (let data of sample) {
+        let temp = {};
+        for (let dimension = 0; dimension < keys.length; dimension++) {
+            if(!isNaN(data[keys[dimension]]) && isFinite(data[keys[dimension]])) {
+                console.log(data[keys[dimension]])
+                temp[keys[dimension]] = (data[keys[dimension]]-lowerst[dimension])/highest[dimension];
+                console.log(temp);
+            }
+        }
+        // console.log(temp);
+        current_sample_normalized.push(temp);
+    }
+    return current_sample_normalized;
+}
 
 /*putGeneratorOptions
 * Entradas: select - Lista que será mostrada na hora da seleção
